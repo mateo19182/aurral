@@ -291,8 +291,20 @@ export async function validateDownloadedTrackFile({
     strict,
     phase: "post",
   });
-  const decision = identity.decision;
-  const reason = identity.reason;
+  let decision = identity.decision;
+  let reason = identity.reason;
+  // Preserve a clearly tagged recording for human review when only the
+  // soft matcher rejects it. Technical and hard identity checks ran above.
+  const normalizeEvidence = (value) => String(value || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const exactTitle = normalizeEvidence(actual.title) === normalizeEvidence(trackRequest.trackName);
+  const requestedArtists = [trackRequest.artistName, ...(trackRequest.artistAliases || [])].map(normalizeEvidence).filter(Boolean);
+  const exactArtist = actual.artists.some((artist) => requestedArtists.includes(normalizeEvidence(artist)));
+  const durationMatches = Number.isFinite(actualDurationMs) && Number.isFinite(trackRequest.durationMs)
+    && Math.abs(actualDurationMs - trackRequest.durationMs) <= 10000;
+  if (decision === POST_DOWNLOAD_DECISIONS.CONFLICTED && exactTitle && exactArtist && durationMatches) {
+    decision = POST_DOWNLOAD_DECISIONS.AMBIGUOUS;
+    reason = "Exact title, artist and duration; automatic matcher disagrees. Verify this version before approving.";
+  }
   const beetsEvidence = {
     distance: identity.distance,
     penalties: identity.penalties,

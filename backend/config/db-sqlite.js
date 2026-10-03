@@ -18,9 +18,12 @@ if (!fs.existsSync(path.dirname(DB_PATH))) {
 
 const db = new Database(DB_PATH);
 
-db.pragma("journal_mode = WAL");
 db.pragma("busy_timeout = 5000");
+if (db.pragma("journal_mode", { simple: true }) !== "wal") db.pragma("journal_mode = WAL");
 db.pragma("synchronous = NORMAL");
+// Upstream fix: shared workers must acquire the write lock before reading.
+const createTransaction = db.transaction.bind(db);
+db.transaction = (fn) => createTransaction(fn).immediate;
 db.pragma("cache_size = -24000");
 db.pragma("mmap_size = 25165824");
 
@@ -507,11 +510,11 @@ if (duplicateLidarrArtistIds.length > 0) {
   })(duplicateLidarrArtistIds);
 }
 
-db.exec(`
+db.transaction(() => db.exec(`
   DROP INDEX IF EXISTS idx_lidarr_artist_id_map_foreign_id;
   CREATE UNIQUE INDEX idx_lidarr_artist_id_map_foreign_id
     ON lidarr_artist_id_map (lidarr_foreign_artist_id);
-`);
+`))();
 
 const tableColumns = db
   .prepare("PRAGMA table_info(playlist_download_jobs)")

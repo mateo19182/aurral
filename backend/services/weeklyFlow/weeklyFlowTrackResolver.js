@@ -161,6 +161,11 @@ function _flattenReleaseTracks(releaseData) {
 function matchTrackByTitle(tracks, trackName) {
   const safeTrackName = String(trackName || "").trim();
   if (!safeTrackName) return null;
+  const normalizeTitle = (value) => String(value || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const exact = (Array.isArray(tracks) ? tracks : []).find((candidate) => normalizeTitle(candidate.title) === normalizeTitle(safeTrackName));
+  if (exact) return exact;
+  // An unresolved remix must not acquire the identity of an original version.
+  if (/remix|rework|edit|mix/i.test(safeTrackName)) return null;
   const best =
     [...(Array.isArray(tracks) ? tracks : [])]
       .map((track) => ({
