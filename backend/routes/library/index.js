@@ -5,6 +5,7 @@ import { registerTracks } from "./handlers/tracks.js";
 import { registerDownloads } from "./handlers/downloads.js";
 import { registerMisc } from "./handlers/misc.js";
 import { registerCanonical } from "./handlers/canonical.js";
+import { registerFileExports } from "./handlers/fileExports.js";
 import mountRoutes from "../shared/mountRoutes.js";
 
 export default mountRoutes([
@@ -13,6 +14,7 @@ export default mountRoutes([
   registerArtists,
   registerAlbums,
   registerTracks,
+  registerFileExports,
   registerDownloads,
   registerMisc,
 ]);

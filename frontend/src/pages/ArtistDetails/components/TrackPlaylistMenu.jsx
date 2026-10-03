@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { ChevronRight, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, Download, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { getTrackDownloadUrl, saveTrackToDevice } from "../../../utils/trackDownload.js";
 import AddActionButton from "../../../components/AddActionButton";
 import { DotLoader } from "../../../components/DotLoader";
 import SearchLibraryCheck from "../../../components/SearchLibraryCheck";
@@ -392,6 +393,7 @@ export const TrackPlaylistMenu = forwardRef(function TrackPlaylistMenu(
 
   const showTrigger = triggerVariant !== "hidden";
   const isKebab = triggerVariant === "kebab";
+  const deviceDownloadUrl = getTrackDownloadUrl(track?.streamPath);
   const triggerClassName = `btn btn-secondary btn-icon btn-xs${open ? " btn-neutral-active" : ""}`;
   const menuClassName = [
     "artist-playlist-menu",
@@ -480,6 +482,21 @@ export const TrackPlaylistMenu = forwardRef(function TrackPlaylistMenu(
                   <span className="artist-menu-item__main">
                     <Plus className="artist-icon-sm" />
                     Add to library
+                  </span>
+                </button>
+              ) : null}
+              {deviceDownloadUrl ? (
+                <button
+                  type="button"
+                  className="artist-menu-item"
+                  onClick={() => {
+                    saveTrackToDevice(deviceDownloadUrl);
+                    closeMenu();
+                  }}
+                >
+                  <span className="artist-menu-item__main">
+                    <Download className="artist-icon-sm" />
+                    Save to device
                   </span>
                 </button>
               ) : null}

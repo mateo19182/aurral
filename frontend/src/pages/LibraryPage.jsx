@@ -61,6 +61,7 @@ import {
   getFlowTrackStreamUrl,
 } from "../utils/api/endpoints/playlists.js";
 import { buildAuthenticatedApiUrl } from "../utils/api/core.js";
+import { getTrackDownloadUrl, saveTrackToDevice } from "../utils/trackDownload.js";
 import { mergeAlbumMetadataTracks } from "../utils/libraryTrackHydration.js";
 import { navigateToLibraryAlbum } from "../utils/searchNavigation";
 import { DEFAULT_LIBRARY_VIEW, LIBRARY_VIEWS } from "../navigation/libraryNavConfig";
@@ -1703,6 +1704,11 @@ function LibraryPage() {
             matchesSource(librarySource);
           const artistName = artist?.name || track.artistName || "Unknown Artist";
           const albumName = album?.title || track.albumName || track.album || "Unknown Album";
+          const deviceDownloadUrl = file && album
+            ? getTrackDownloadUrl(
+                `/library/canonical-stream/${encodeURIComponent(album.id)}/${encodeURIComponent(track.id)}`,
+              )
+            : null;
           const trackNumber = track.albums?.find(
             (entry) => String(entry.albumId) === String(album?.id),
           )?.trackNumber;
@@ -1740,6 +1746,16 @@ function LibraryPage() {
                     disabled: isPreviewLibrary || downloadPending,
                   },
                 ]
+              : []),
+            ...(deviceDownloadUrl
+              ? [{
+                  id: "save-to-device",
+                  label: "Save to device",
+                  icon: Download,
+                  separatorBefore: true,
+                  onSelect: () => saveTrackToDevice(deviceDownloadUrl),
+                  disabled: isPreviewLibrary,
+                }]
               : []),
             ...(album
               ? [
