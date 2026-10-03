@@ -278,6 +278,54 @@ test("unknown albums return 404", async () => {
   assert.deepEqual(await response.json(), { error: "Album not found" });
 });
 
+test("album file list returns authenticated download identities without filesystem paths", async () => {
+  const response = await authenticated(`/api/library/album-files/${album.id}`);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.files.length, 2);
+  assert.deepEqual(body.files.map((file) => file.downloadPath).sort(), [
+    `/library/canonical-download/${album.id}/${track.id}`,
+    `/library/canonical-download/${album.id}/${secondTrack.id}`,
+  ].sort());
+  assert.ok(body.files.every((file) => file.filename === filename));
+  assert.deepEqual(body.missing.map((item) => item.title), ["Missing track"]);
+  assert.ok(!JSON.stringify(body).includes(state.baseDir));
+});
+
+test("selected file list accepts the browser JSON request and deduplicates tracks", async () => {
+  const response = await request("/api/library/bulk-files", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ tracks: [
+      { albumId: album.id, trackId: secondTrack.id },
+      { albumId: album.id, trackId: secondTrack.id },
+      { albumId: otherAlbum.id, trackId: otherTrack.id },
+    ] }),
+  });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.files.length, 2);
+  for (const file of body.files) {
+    const downloaded = await authenticated(`/api${file.downloadPath}`);
+    assert.equal(downloaded.status, 200);
+    await downloaded.arrayBuffer();
+  }
+});
+
+test("normal album and bulk file lists require a valid session", async () => {
+  for (const url of [
+    `/api/library/album-files/${album.id}`,
+    `/api/library/album-files/${album.id}?token=${expiredToken}`,
+    "/api/library/bulk-files",
+  ]) {
+    const response = await request(url, url.includes("bulk-files") ? {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: '{"tracks":[]}',
+    } : {});
+    assert.equal(response.status, 401);
+    await response.arrayBuffer();
+  }
+});
+
 test("cancelling a large ZIP leaves the server able to serve subsequent downloads", async () => {
   const largePath = path.join(state.baseDir, "cancel-test.flac");
   await writeFile(largePath, "");

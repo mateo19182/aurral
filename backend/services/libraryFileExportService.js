@@ -70,7 +70,7 @@ async function prepareArchive(selection, model, name) {
       safeComponent(album.title, "Unknown Album"),
       safeComponent(path.basename(filePath), `Track ${trackId}`),
     ].join("/");
-    entries.push({ filePath, stat: fileStat, name: uniqueEntryName(entryName, usedNames) });
+    entries.push({ albumId, trackId, filePath, stat: fileStat, name: uniqueEntryName(entryName, usedNames) });
   }
   if (!entries.length) throw new FileExportError(404, "No available audio files in this selection");
   return { entries, missing, name: `${safeComponent(name, "Music")}.zip` };

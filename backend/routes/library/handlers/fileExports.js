@@ -29,6 +29,25 @@ export function registerFileExports(router) {
       res.status(status).json({ error: status === 500 ? "Download failed" : error.message });
     }
   };
+  const sendFileList = (prepare) => async (req, res) => {
+    try {
+      const archive = await prepare(req);
+      res.json({
+        files: archive.entries.map((entry) => ({
+          downloadPath: `/library/canonical-download/${entry.albumId}/${entry.trackId}`,
+          filename: path.basename(entry.filePath),
+        })),
+        missing: archive.missing,
+      });
+    } catch (error) {
+      const status = error instanceof FileExportError ? error.status : 500;
+      res.status(status).json({ error: status === 500 ? "Download failed" : error.message });
+    }
+  };
+  router.get("/album-files/:albumId", noCache, requireDownloadUser,
+    sendFileList((req) => prepareAlbumArchive(req.params.albumId)));
+  router.post("/bulk-files", noCache, requireDownloadUser, express.json({ limit: "64kb" }),
+    sendFileList((req) => prepareSelectionArchive(req.body?.tracks)));
   router.get("/album-download/:albumId", noCache, requireDownloadUser,
     sendArchive((req) => prepareAlbumArchive(req.params.albumId)));
   router.post("/bulk-download", noCache, requireDownloadUser,

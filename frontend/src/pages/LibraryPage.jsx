@@ -7,6 +7,7 @@ import {
   ArrowRight,
   ArrowUpZA,
   Download,
+  FileArchive,
   ExternalLink,
   Grid3X3,
   Heart,
@@ -64,9 +65,12 @@ import { buildAuthenticatedApiUrl } from "../utils/api/core.js";
 import {
   getTrackDownloadUrl,
   saveTrackToDevice,
-  saveAlbumToDevice,
-  saveSelectedTracksToDevice,
+  saveAlbumZipToDevice,
+  saveSelectedTracksZipToDevice,
   MAX_ARCHIVE_TRACKS,
+  getAlbumDownloadFiles,
+  getSelectedDownloadFiles,
+  saveFilesIndividuallyToDevice,
 } from "../utils/trackDownload.js";
 import TrackDownloadToolbar from "../components/TrackDownloadToolbar";
 import { mergeAlbumMetadataTracks } from "../utils/libraryTrackHydration.js";
@@ -445,6 +449,7 @@ function LibraryPage() {
   const [playlistSavingKey, setPlaylistSavingKey] = useState("");
   const [trackDownloadStates, setTrackDownloadStates] = useState({});
   const [selectedDownloads, setSelectedDownloads] = useState({});
+  const [downloadingFiles, setDownloadingFiles] = useState(false);
   const [libraryRemoval, setLibraryRemoval] = useState(null);
   const [libraryInfo, setLibraryInfo] = useState(null);
   const [deleteFiles, setDeleteFiles] = useState(false);
@@ -1696,14 +1701,31 @@ function LibraryPage() {
     setSelectedDownloads(next);
   };
 
+  const downloadFiles = async (getFiles) => {
+    if (downloadingFiles) return;
+    setDownloadingFiles(true);
+    try {
+      const { files, missing } = await getFiles();
+      showSuccess(`Starting ${files.length} file downloads. Allow multiple downloads if your browser asks.`);
+      if (missing.length) showError(`${missing.length} unavailable tracks were skipped.`);
+      await saveFilesIndividuallyToDevice(files);
+    } catch (error) {
+      showError(error.response?.data?.error || "Could not start file downloads.");
+    } finally {
+      setDownloadingFiles(false);
+    }
+  };
+
   const renderTrackList = (tracks, label) => (
     <div className="native-library-track-list">
       <TrackDownloadToolbar
         count={Object.keys(selectedDownloads).length}
+        downloadingFiles={downloadingFiles}
         disabled={isPreviewLibrary || !tracks.some((track) => firstAvailableFile(track) && getAlbumForTrack(track))}
         onSelectAll={() => selectDownloadTracks(tracks)}
         onClear={() => setSelectedDownloads({})}
-        onDownload={() => saveSelectedTracksToDevice(Object.values(selectedDownloads))}
+        onDownload={() => saveSelectedTracksZipToDevice(Object.values(selectedDownloads))}
+        onDownloadFiles={() => downloadFiles(() => getSelectedDownloadFiles(Object.values(selectedDownloads)))}
       />
       <div
         className="native-library-track native-library-track--heading"
@@ -2377,10 +2399,19 @@ function LibraryPage() {
               <button
                 type="button"
                 className="btn btn-surface btn-sm"
-                onClick={() => saveAlbumToDevice(libraryAlbum.id)}
-                disabled={isPreviewLibrary || availability.available === 0}
+                onClick={() => downloadFiles(() => getAlbumDownloadFiles(libraryAlbum.id))}
+                disabled={isPreviewLibrary || availability.available === 0 || downloadingFiles}
               >
                 <Download aria-hidden="true" />
+                {downloadingFiles ? "Starting file downloads…" : "Save album files"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-surface btn-sm"
+                onClick={() => saveAlbumZipToDevice(libraryAlbum.id)}
+                disabled={isPreviewLibrary || availability.available === 0}
+              >
+                <FileArchive aria-hidden="true" />
                 {availability.available < availability.total ? "Save available tracks ZIP" : "Save album ZIP"}
               </button>
               <button

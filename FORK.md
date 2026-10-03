@@ -17,10 +17,17 @@ existing account/session authentication and album/track file lookup. Ordinary
 users can download without permission to delete or acquire music. The original
 audio and embedded tags are preserved, and the browser writes directly to disk.
 Individual downloads support byte ranges for resuming. Album pages offer
-**Save album ZIP**. Track lists have checkboxes, **Select available tracks**,
+**Save album files** with a download icon and **Save album ZIP** with an archive
+icon. Track lists offer **Save selected files** and **Save selected ZIP**,
+checkboxes, **Select available tracks**,
 **Save selected ZIP** and **Clear selection**. A selection can include tracks
 from multiple albums and up to 500 tracks. The select-available button selects
 the current list/page; the selection persists while paging within that view.
+
+Separate-file downloads use the original file endpoints and the browser
+download manager. Files are queued at half-second intervals without buffering
+audio in the browser. The browser may request permission for multiple downloads;
+the UI explains this when a batch starts. Ordinary users can use both formats.
 
 Archives stream to the browser without temporary ZIP files or buffering whole
 audio files. Original audio is stored unchanged in artist/album folders.
@@ -39,7 +46,10 @@ use `POST /api/library/bulk-download` with a `tracks` form field containing a
 JSON array of `{ "albumId": 1, "trackId": 2 }` identities. A native browser form
 lets the browser save the response directly to disk. Every export resolves
 canonical library IDs on the server; callers cannot specify files or archive
-paths. The archive service uses the pinned `yazl` dependency and closes its file
+paths. Separate-file manifests use `GET /api/library/album-files/:albumId` and
+`POST /api/library/bulk-files` with a JSON `tracks` array. They return filenames,
+authenticated file download paths and any unavailable tracks, with the same
+server-side file checks as archives. The archive service uses the pinned `yazl` dependency and closes its file
 streams when the client cancels.
 
 Existing server fixes are kept in their own commit, separate from file export:
@@ -91,15 +101,15 @@ Once verified, merge the update branch into `mateo/downloads` and push it.
 
 ## Building and deploying
 
-Use a unique version for each release, such as `2.10.0-mateo.3`. Images record
+Use a unique version for each release, such as `2.10.0-mateo.4`. Images record
 their Git revision and fork URL. From the source checkout:
 
 ```sh
 docker build \
-  --build-arg APP_VERSION=2.10.0-mateo.2 \
+  --build-arg APP_VERSION=2.10.0-mateo.3 \
   --build-arg GITHUB_REPO=mateo19182/aurral \
   --build-arg VCS_REF="$(git rev-parse HEAD)" \
-  -t aurral-fork:2.10.0-mateo.2 .
+  -t aurral-fork:2.10.0-mateo.3 .
 ```
 
 Alternatively run **Fork image** in GitHub Actions on `mateo/downloads`. It runs

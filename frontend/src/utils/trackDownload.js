@@ -1,12 +1,30 @@
-import { buildAuthenticatedApiUrl } from "./api/core.js";
+import { buildAuthenticatedApiUrl, getData, postData } from "./api/core.js";
 
 export const MAX_ARCHIVE_TRACKS = 500;
 
-export function saveAlbumToDevice(albumId) {
+export const getAlbumDownloadFiles = (albumId) =>
+  getData(`/library/album-files/${encodeURIComponent(albumId)}`);
+
+export const getSelectedDownloadFiles = (tracks) =>
+  postData("/library/bulk-files", { tracks });
+
+export async function saveFilesIndividuallyToDevice(files) {
+  for (const [index, file] of files.entries()) {
+    if (index > 0) await new Promise((resolve) => setTimeout(resolve, 500));
+    const link = document.createElement("a");
+    link.href = buildAuthenticatedApiUrl(file.downloadPath);
+    link.download = file.filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+}
+
+export function saveAlbumZipToDevice(albumId) {
   saveTrackToDevice(buildAuthenticatedApiUrl(`/library/album-download/${encodeURIComponent(albumId)}`));
 }
 
-export function saveSelectedTracksToDevice(tracks) {
+export function saveSelectedTracksZipToDevice(tracks) {
   const form = document.createElement("form");
   form.method = "POST";
   form.action = buildAuthenticatedApiUrl("/library/bulk-download");
