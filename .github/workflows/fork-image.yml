@@ -1,0 +1,46 @@
+name: Fork image
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Image version, for example 2.10.0-mateo.1
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    uses: ./.github/workflows/validate.yml
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check image version
+        env:
+          FORK_VERSION: ${{ inputs.version }}
+        run: |
+          [[ "$FORK_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-mateo\.[0-9]+$ ]]
+      - name: Build image
+        env:
+          FORK_VERSION: ${{ inputs.version }}
+        run: |
+          docker build \
+            --build-arg APP_VERSION="$FORK_VERSION" \
+            --build-arg GITHUB_REPO="$GITHUB_REPOSITORY" \
+            --build-arg VCS_REF="$GITHUB_SHA" \
+            --tag "ghcr.io/$GITHUB_REPOSITORY:$FORK_VERSION" .
+      - name: Publish image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORK_VERSION: ${{ inputs.version }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "ghcr.io/$GITHUB_REPOSITORY:$FORK_VERSION"

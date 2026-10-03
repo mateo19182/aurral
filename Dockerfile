@@ -94,6 +94,11 @@ COPY --chmod=755 backend/docker-entrypoint.sh /usr/local/bin/
 
 ARG APP_VERSION=unknown
 ENV APP_VERSION=$APP_VERSION
+ARG GITHUB_REPO=lklynet/aurral
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.source="https://github.com/${GITHUB_REPO}" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}"
 
 EXPOSE 3001
 
