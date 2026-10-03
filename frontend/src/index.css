@@ -8275,6 +8275,14 @@ button.native-library-card__artist:focus-visible {
   overflow-x: auto;
 }
 
+.native-library-download-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
 .native-library-track {
   --native-library-track-columns: 2rem 2rem 2.35rem minmax(12rem, 1.4fr) minmax(8rem, 1fr) minmax(8rem, 1fr) 4.5rem 1.7rem 1.7rem 1.7rem;
 
@@ -8912,13 +8920,12 @@ button.native-library-genre-row:focus-visible {
   }
 
   .native-library-track {
-    --native-library-track-columns: 1.8rem 2.15rem minmax(0, 1fr) 3.8rem 1.7rem 1.7rem 1.7rem;
+    --native-library-track-columns: 1.8rem 1.4rem 2.15rem minmax(0, 1fr) 3.8rem 1.7rem 1.7rem 1.7rem;
 
     min-width: 0;
     gap: 0.4rem;
   }
 
-  .native-library-track__number,
   .native-library-track__link {
     display: none;
   }

@@ -61,7 +61,14 @@ import {
   getFlowTrackStreamUrl,
 } from "../utils/api/endpoints/playlists.js";
 import { buildAuthenticatedApiUrl } from "../utils/api/core.js";
-import { getTrackDownloadUrl, saveTrackToDevice } from "../utils/trackDownload.js";
+import {
+  getTrackDownloadUrl,
+  saveTrackToDevice,
+  saveAlbumToDevice,
+  saveSelectedTracksToDevice,
+  MAX_ARCHIVE_TRACKS,
+} from "../utils/trackDownload.js";
+import TrackDownloadToolbar from "../components/TrackDownloadToolbar";
 import { mergeAlbumMetadataTracks } from "../utils/libraryTrackHydration.js";
 import { navigateToLibraryAlbum } from "../utils/searchNavigation";
 import { DEFAULT_LIBRARY_VIEW, LIBRARY_VIEWS } from "../navigation/libraryNavConfig";
@@ -437,6 +444,7 @@ function LibraryPage() {
   const refreshAttemptRef = useRef(0);
   const [playlistSavingKey, setPlaylistSavingKey] = useState("");
   const [trackDownloadStates, setTrackDownloadStates] = useState({});
+  const [selectedDownloads, setSelectedDownloads] = useState({});
   const [libraryRemoval, setLibraryRemoval] = useState(null);
   const [libraryInfo, setLibraryInfo] = useState(null);
   const [deleteFiles, setDeleteFiles] = useState(false);
@@ -1674,8 +1682,29 @@ function LibraryPage() {
     setSearchParams(next);
   };
 
+  const selectDownloadTracks = (tracks) => {
+    const next = { ...selectedDownloads };
+    for (const track of tracks) {
+      const album = getAlbumForTrack(track);
+      if (!firstAvailableFile(track) || !album) continue;
+      next[`${album.id}:${track.id}`] = { albumId: album.id, trackId: track.id };
+    }
+    if (Object.keys(next).length > MAX_ARCHIVE_TRACKS) {
+      showError(`Select at most ${MAX_ARCHIVE_TRACKS} tracks per download.`);
+      return;
+    }
+    setSelectedDownloads(next);
+  };
+
   const renderTrackList = (tracks, label) => (
     <div className="native-library-track-list">
+      <TrackDownloadToolbar
+        count={Object.keys(selectedDownloads).length}
+        disabled={isPreviewLibrary || !tracks.some((track) => firstAvailableFile(track) && getAlbumForTrack(track))}
+        onSelectAll={() => selectDownloadTracks(tracks)}
+        onClear={() => setSelectedDownloads({})}
+        onDownload={() => saveSelectedTracksToDevice(Object.values(selectedDownloads))}
+      />
       <div
         className="native-library-track native-library-track--heading"
         aria-hidden="true"
@@ -1819,8 +1848,21 @@ function LibraryPage() {
             ) : (
               <span aria-hidden="true" />
             )}
-            <span className="native-library-track__number" aria-hidden="true">
-              {index + 1}
+            <span className="native-library-track__number">
+              {deviceDownloadUrl && !isPreviewLibrary ? (
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${track.title || "track"} for download`}
+                  checked={Boolean(selectedDownloads[`${album.id}:${track.id}`])}
+                  onChange={(event) => {
+                    if (event.target.checked) selectDownloadTracks([track]);
+                    else setSelectedDownloads((current) => {
+                      const { [`${album.id}:${track.id}`]: _, ...remaining } = current;
+                      return remaining;
+                    });
+                  }}
+                />
+              ) : <span aria-hidden="true">{index + 1}</span>}
             </span>
             {album ? (
               <button
@@ -2332,6 +2374,15 @@ function LibraryPage() {
                 .join(" · ")}
             </p>
             <div className="native-library-detail__actions">
+              <button
+                type="button"
+                className="btn btn-surface btn-sm"
+                onClick={() => saveAlbumToDevice(libraryAlbum.id)}
+                disabled={isPreviewLibrary || availability.available === 0}
+              >
+                <Download aria-hidden="true" />
+                {availability.available < availability.total ? "Save available tracks ZIP" : "Save album ZIP"}
+              </button>
               <button
                 type="button"
                 className="native-library-page-play"
